@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel SSMA — Norte/Nordeste</title>
+<style>
+  :root{
+    --red:#d5261c;
+    --red-deep:#a11a13;
+    --gold:#ffc72c;
+    --gold-deep:#e0a713;
+    --cream:#fff8ec;
+    --card:#ffffff;
+    --ink:#2b2320;
+    --ink-soft:#7a6f65;
+    --line:#f0e2c8;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--cream);
+    color:var(--ink);
+    background-image:radial-gradient(circle at 1px 1px, rgba(213,38,28,.06) 1.5px, transparent 0);
+    background-size:22px 22px;
+    min-height:100vh;
+  }
+  header{
+    background:var(--red);
+    background-image:linear-gradient(180deg,#e2372c 0%, var(--red) 55%, var(--red-deep) 100%);
+    color:#fff;
+    padding:34px 20px 26px;
+    text-align:center;
+    box-shadow:0 6px 18px rgba(161,26,19,.28);
+    border-bottom:4px solid var(--gold);
+  }
+  .eyebrow{
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:1.6px;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:6px;
+  }
+  header h1{
+    margin:0 0 6px;
+    font-size:26px;
+    font-weight:900;
+    font-family:Georgia,"Times New Roman",serif;
+    text-transform:uppercase;
+  }
+  header p{
+    margin:0;
+    font-size:13px;
+    color:#ffe1b8;
+    font-weight:500;
+  }
+  main{
+    max-width:640px;
+    margin:0 auto;
+    padding:28px 18px 60px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+  a.card{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+    text-decoration:none;
+    color:var(--ink);
+    box-shadow:0 4px 14px rgba(43,35,32,.06);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  a.card:active{transform:scale(.98);}
+  .icon{
+    flex:0 0 auto;
+    width:52px;height:52px;
+    border-radius:14px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:26px;
+    background:var(--gold);
+    color:var(--red-deep);
+  }
+  .icon.dark{background:#17191b;color:var(--gold);}
+  .card-body{flex:1;min-width:0;}
+  .card-body h2{
+    margin:0 0 3px;
+    font-size:16px;
+    font-weight:800;
+    letter-spacing:.2px;
+  }
+  .card-body p{
+    margin:0;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    line-height:1.4;
+  }
+  .arrow{flex:0 0 auto;color:var(--ink-soft);font-size:18px;}
+  footer{
+    text-align:center;
+    font-size:11px;
+    color:var(--ink-soft);
+    padding:0 18px 30px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">SSMA</div>
+  <h1>Painel SSMA</h1>
+  <p>Norte / Nordeste — acesso centralizado aos projetos</p>
+</header>
+
+<main>
+  <a class="card" href="fornecedores/">
+    <div class="icon">📦</div>
+    <div class="card-body">
+      <h2>Book Fornecedores</h2>
+      <p>Catálogo de EPIs, sinalização, peças e mobiliário — busca rápida com fotos.</p>
+    </div>
+    <div class="arrow">›</div>
+  </a>
+</main>
+
+<footer>Time de Segurança do Trabalho — 43 unidades</footer>
+
+</body>
+</html>
