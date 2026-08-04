@@ -1,0 +1,74 @@
+AUDITOR SSMA DE CAMPO — como publicar como app instalável no Android
+=====================================================================
+
+Estes 5 arquivos precisam ficar juntos, na RAIZ do repositório do GitHub Pages
+(mesmo esquema que você já usa no book-codigos-ssma):
+
+  index.html
+  manifest.json
+  sw.js
+  icon-192.png
+  icon-512.png
+
+PASSO A PASSO
+1. Crie um repositório novo (ex: auditor-ssma-campo) na conta SSMA-MCD,
+   ou use um repositório existente.
+2. Faça upload destes 5 arquivos na raiz do repositório.
+3. Em Settings > Pages, ative o GitHub Pages na branch main (pasta /root).
+4. Acesse o link gerado (algo como
+   https://ssma-mcd.github.io/auditor-ssma-campo/) pelo Chrome do Android.
+5. Toque no menu (⋮) do Chrome > "Adicionar à tela inicial" ou
+   "Instalar aplicativo". O ícone do Auditor SSMA aparece na tela
+   como um app normal, abre em tela cheia, sem barra do navegador.
+
+IMPORTANTE SOBRE A IA (análise de foto e geração automática de texto) — É GRATUITA
+Essas duas funções de IA usam a API do Gemini (Google AI Studio), que é
+gratuita e não pede cartão de crédito. É só uma vez, por aparelho:
+  1. Acesse aistudio.google.com pelo celular ou computador
+  2. Entre com uma conta Google
+  3. Toque em "Get API key" / "Criar chave de API"
+  4. Copie a chave (começa com "AIza...")
+  5. No app, toque em "⚙ IA" no topo da tela e cole a chave
+A chave fica salva só neste celular. O plano gratuito do Google tem um limite
+de uso por dia — mais do que suficiente para o volume de uma auditoria de
+campo. Sem essa chave configurada, os campos de descrição/plano de ação
+continuam funcionando normalmente, só que você preenche manualmente.
+
+IMPORTANTE SOBRE OS DADOS
+Por padrão, os dados das auditorias ficam salvos no próprio celular (localStorage
+do navegador), não em uma nuvem compartilhada — cada pessoa que instalar o app
+tem seus próprios registros.
+
+OPCIONAL — NUVEM NO GITHUB (dados centralizados para todo o time)
+Toque em "💾 Local" no topo da tela (vira "☁ Nuvem" quando configurado) para
+centralizar as auditorias em um repositório do GitHub, em vez de cada celular
+guardar os seus dados separadamente:
+  1. Crie um repositório vazio (recomendado: privado) na conta SSMA-MCD,
+     ex: auditor-ssma-dados
+  2. Em github.com/settings/tokens?type=beta, crie um "Fine-grained personal
+     access token" com acesso restrito só a esse repositório e permissão
+     "Contents: Read and write" (não use um token de acesso total à conta)
+  3. No app, toque em "💾 Local" e preencha: o token, o dono (owner, ex:
+     SSMA-MCD) e o nome do repositório
+  4. Repita esse mesmo cadastro em cada celular do time que for usar o app,
+     apontando para o MESMO repositório — assim todos leem e gravam os
+     mesmos dados
+Cada consultor(a)/gerente ainda configura sua própria chave de IA (gratuita,
+Gemini) separadamente — isso não é compartilhado, só os dados das auditorias.
+
+Se você já tinha auditorias salvas localmente antes de configurar a nuvem,
+use "Exportar backup" (aba Painel) antes de configurar, depois "Importar
+backup" depois de configurar — assim as auditorias antigas vão para o
+GitHub também.
+
+Use os botões "Exportar backup" e "Importar backup" (na aba Painel) para:
+  - fazer backup dos dados regularmente (evita perda)
+  - migrar dados do modo local para o modo nuvem (ou vice-versa)
+
+Na aba Histórico, cada auditoria tem um botão "Excluir" — útil enquanto você
+está testando o app.
+
+Se no futuro você quiser que todo o time veja as mesmas auditorias em tempo
+real (sincronizado entre celulares), isso exige um banco de dados na nuvem
+(ex: Firebase ou Google Sheets como back-end) — posso te ajudar a montar isso
+como uma evolução.
