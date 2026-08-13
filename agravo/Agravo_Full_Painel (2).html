@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGRAVO — Painel de Reversão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --ink:#12202E; --ink-soft:#3C4C5C;
+    --paper:#F2F3EF; --card:#FFFFFF;
+    --line:#DDE1DA;
+    --amber:#C08A22; --amber-soft:#F4E6C6;
+    --green:#1F7A52; --green-soft:#DCEEE3;
+    --red:#AE3B2E; --red-soft:#F5DEDA;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --disp: 'Space Grotesk', system-ui, sans-serif;
+    --body: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-font-smoothing:antialiased}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);}
+
+  header{background:var(--ink);color:#fff;padding:20px 26px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px}
+  .brand-eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:#8FA0AE;text-transform:uppercase;margin:0 0 4px}
+  header h1{margin:0;font-family:var(--disp);font-weight:700;font-size:23px;letter-spacing:-.01em}
+  .sync-status{font-family:var(--mono);font-size:11px;color:#B8C4CC;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+  .sync-line{display:flex;align-items:center;gap:7px}
+  .sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(31,122,82,.25)}
+  .sync-dot.off{background:var(--red);box-shadow:0 0 0 3px rgba(174,59,46,.25)}
+  @media (prefers-reduced-motion: no-preference){
+    .sync-dot{animation:pulse 2.4s ease-in-out infinite}
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+  /* signature: signal strip — one tick per loja, cor = status */
+  .signal-strip{display:flex;gap:2px;padding:0 26px;margin-top:16px;height:14px}
+  .tick{flex:1;border-radius:1px;background:var(--line);transition:background .3s}
+  .tick.good{background:var(--green)}
+  .tick.mid{background:var(--amber)}
+  .tick.low{background:var(--red)}
+
+  .hero{padding:22px 26px 10px;display:flex;gap:28px;flex-wrap:wrap;align-items:flex-end}
+  .hero-figure{font-family:var(--mono);font-size:44px;font-weight:600;line-height:1;color:var(--ink)}
+  .hero-figure .unit{font-size:20px;color:var(--ink-soft);margin-left:2px}
+  .hero-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-top:6px}
+  .kpis{display:flex;gap:10px;flex-wrap:wrap}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:10px 16px;min-width:108px}
+  .kpi .n{font-family:var(--mono);font-size:19px;font-weight:600;color:var(--ink)}
+  .kpi .l{font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+
+  nav{display:flex;gap:2px;padding:20px 26px 0;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  nav button{border:none;background:transparent;padding:10px 15px;font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.03em;
+    color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;text-transform:uppercase}
+  nav button:hover{color:var(--ink)}
+  nav button.active{color:var(--ink);border-bottom:2px solid var(--amber)}
+
+  main{padding:22px 26px 48px;max-width:1000px;margin:0 auto}
+  .panel{display:none}
+  .panel.active{display:block;animation:fadein .25s ease}
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  .panel-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .panel-toolbar button{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:7px 12px;font-family:var(--body);font-size:12px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .panel-toolbar button:hover{border-color:var(--ink-soft)}
+
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:24px}
+  th{background:var(--ink);color:#fff;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;text-align:left;padding:10px 12px;font-weight:600}
+  td{padding:9px 12px;font-size:13px;border-top:1px solid var(--line);font-family:var(--body)}
+  td:nth-child(n+2){font-family:var(--mono);font-variant-numeric:tabular-nums}
+  tbody tr:nth-child(even) td{background:#F8F8F5}
+  tbody tr:hover td{background:var(--amber-soft)}
+  .pct{font-weight:700}
+  .pct.good{color:var(--green)} .pct.mid{color:var(--amber)} .pct.low{color:var(--red)}
+
+  .section-title{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink);margin:28px 0 10px;text-transform:uppercase;letter-spacing:.1em;
+    display:flex;align-items:center;gap:10px}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--line)}
+
+  .store-card{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:0 4px 4px 0;margin-bottom:10px;overflow:hidden}
+  .store-card.st-good{border-left-color:var(--green)}
+  .store-card.st-mid{border-left-color:var(--amber)}
+  .store-card.st-low{border-left-color:var(--red)}
+  .store-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#FAFAF7;border-bottom:1px solid var(--line);gap:8px}
+  .store-head .name{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--ink);letter-spacing:.02em}
+  .store-head .badge{font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+  .store-head.done .badge{color:var(--green);font-weight:600}
+  .store-head .mailbtn{margin-left:auto;background:none;border:1px solid var(--line);border-radius:3px;padding:4px 9px;font-family:var(--body);font-size:11px;color:var(--ink);cursor:pointer}
+  .store-head .mailbtn:hover{background:var(--amber-soft);border-color:var(--amber)}
+  .items{padding:2px 0}
+  .item{display:flex;gap:10px;padding:9px 16px;font-size:12.8px;line-height:1.5;border-top:1px solid var(--line);align-items:flex-start}
+  .item:first-child{border-top:none}
+  .item .num{font-family:var(--mono);color:#B4B0A4;font-weight:600;min-width:22px}
+  .item .txt{color:var(--ink)}
+  .item .tag{color:var(--ink-soft);font-style:italic;white-space:nowrap}
+  .done-msg{padding:14px 16px;color:var(--green);font-style:italic;font-size:12.8px}
+
+  footer{text-align:center;color:var(--ink-soft);font-size:11px;padding:20px 0 34px;display:flex;flex-direction:column;gap:10px;align-items:center;font-family:var(--mono)}
+  footer button{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px 15px;font-family:var(--body);font-size:11.5px;font-weight:500;cursor:pointer}
+  footer button:hover{border-color:var(--ink-soft)}
+
+  #captureOverlay{position:fixed;inset:0;background:rgba(242,243,239,.94);display:none;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;color:var(--ink);font-weight:600;z-index:99999}
+  #captureBox{position:fixed;top:0;left:-99999px;background:#fff}
+
+  @media (max-width:640px){
+    header{padding:16px 16px} .signal-strip{padding:0 16px} .hero{padding:18px 16px 8px} nav{padding:16px 16px 0} main{padding:18px 16px 40px}
+    .hero-figure{font-size:36px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <p class="brand-eyebrow">SSMA · Norte / Nordeste</p>
+    <h1>AGRAVO — Reversões</h1>
+  </div>
+  <div class="sync-status">
+    <div class="sync-line"><span class="sync-dot" id="syncDot"></span><span id="syncText">conectando…</span></div>
+  </div>
+</header>
+
+<div class="signal-strip" id="signalStrip" title="Cada barra é uma loja — verde 80%+, âmbar 60–79%, vermelho abaixo de 60%"></div>
+
+<div class="hero">
+  <div>
+    <div class="hero-figure" id="heroFigure">—<span class="unit">%</span></div>
+    <div class="hero-label">Reversão geral da rede</div>
+  </div>
+  <div class="kpis" id="kpisGeral"></div>
+</div>
+
+<nav id="tabs"></nav>
+
+<main>
+<div id="panelsRoot"></div>
+</main>
+<footer>
+  <div>fonte: planilha google sheets · edição direta na aba BASE</div>
+  <button id="exportBtn">exportar situação atual (.xlsx)</button>
+</footer>
+
+<div id="captureOverlay">gerando imagem…</div>
+<div id="captureBox"></div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbwStVBI5Kx6ZoaPpRgn9TBFPCMdJ84VE4b9MUdFg7BDB1V0hJrCufPgIS9F1sp0VFFd/exec";
+const STORE_CONSULTANT = {"ADJ": "SETOR ARACAJU", "ADM": "SETOR ARACAJU", "ADR": "SETOR ARACAJU", "AJU": "SETOR ARACAJU", "ANI": "FERNANDO AUGUSTO JESUS SANTOS", "ARA": "SETOR ARACAJU", "BAE": "WANDERSON SILVEIRA COSTA", "BED": "FERNANDO AUGUSTO JESUS SANTOS", "BMD": "FERNANDO AUGUSTO JESUS SANTOS", "BVC": "PRISCILLA RODRIGUES SA", "CNL": "WANDERSON SILVEIRA COSTA", "COC": "LUCAS DA SILVA OLIVEIRA", "FGV": "LUCAS DA SILVA OLIVEIRA", "FS2": "LUCAS DA SILVA OLIVEIRA", "FST": "LUCAS DA SILVA OLIVEIRA", "GRA": "WANDERSON SILVEIRA COSTA", "ILD": "PRISCILLA RODRIGUES SA", "ITB": "PRISCILLA RODRIGUES SA", "ITN": "PRISCILLA RODRIGUES SA", "LFD": "LUCAS DA SILVA OLIVEIRA", "MCZ": "TANIA CRISTINA PEREIRA NUNES VIEIRA", "MDM": "TANIA CRISTINA PEREIRA NUNES VIEIRA", "MDR": "TANIA CRISTINA PEREIRA NUNES VIEIRA", "MF2": "TANIA CRISTINA PEREIRA NUNES VIEIRA", "MFL": "TANIA CRISTINA PEREIRA NUNES VIEIRA", "MIG": "TANIA CRISTINA PEREIRA NUNES VIEIRA", "NSS": "SETOR ARACAJU", "OPS": "LUCAS DA SILVA OLIVEIRA", "ORD": "SETOR ARACAJU", "PBA": "LUCAS DA SILVA OLIVEIRA", "PNO": "FERNANDO AUGUSTO JESUS SANTOS", "PSA": "TANIA CRISTINA PEREIRA NUNES VIEIRA", "PSG": "PRISCILLA RODRIGUES SA", "PSM": "TANIA CRISTINA PEREIRA NUNES VIEIRA", "SBA": "WANDERSON SILVEIRA COSTA", "SDL": "FERNANDO AUGUSTO JESUS SANTOS", "SIH": "FERNANDO AUGUSTO JESUS SANTOS", "SLD": "FERNANDO AUGUSTO JESUS SANTOS", "SLU": "FERNANDO AUGUSTO JESUS SANTOS", "SOD": "WANDERSON SILVEIRA COSTA", "SPR": "LUCAS DA SILVA OLIVEIRA", "SRM": "SETOR ARACAJU", "VDC": "PRISCILLA RODRIGUES SA"};
+const CONSULTANTS = [{"key":"FERNANDO AUGUSTO JESUS SANTOS","tab":"fernando","label":"Fernando Santos"},{"key":"WANDERSON SILVEIRA COSTA","tab":"wanderson","label":"Wanderson Costa"},{"key":"PRISCILLA RODRIGUES SA","tab":"priscilla","label":"Priscilla Sá"},{"key":"LUCAS DA SILVA OLIVEIRA","tab":"lucas","label":"Lucas Oliveira"},{"key":"TANIA CRISTINA PEREIRA NUNES VIEIRA","tab":"tania","label":"Tania Cristina"},{"key":"SETOR ARACAJU","tab":"aracaju","label":"Setor Aracaju"}];
+const POLL_MS = 20000;
+
+let DATA = [];
+let HISTORY = []; // [data, total, finalizadas, pendentes, pctGeral, pctFernando, pctPriscilla, pctLucas, pctTania, pctWanderson, pctAracaju]
+let LAST_TOTALS = {};
+
+function esc(s){ const d = document.createElement('div'); d.textContent = s===undefined||s===null? '': s; return d.innerHTML; }
+function pctClass(p){ if (p>=0.80) return 'good'; if (p>=0.60) return 'mid'; return 'low'; }
+function fmtPct(p){ return (p*100).toFixed(1); }
+
+async function fetchBase(){
+  try {
+    const res = await fetch(API_URL, {method:'GET', cache:'no-store'});
+    const payload = await res.json();
+    if (payload && payload.error) throw new Error(payload.error);
+    const rows = Array.isArray(payload) ? payload : payload.rows;
+    HISTORY = (payload && payload.history) ? payload.history : HISTORY;
+    if (!Array.isArray(rows)) throw new Error('resposta inesperada');
+    DATA = rows.map((r, i) => {
+      const sigla = (r[0]||'').toString().trim().toUpperCase();
+      return {
+        id: sigla + '_' + i,
+        sigla,
+        pergunta: (r[1]||'').toString(),
+        mov: (r[3]||'').toString().trim(),
+        resp: (r[4]||'').toString().trim().toUpperCase()
+      };
+    }).filter(d => d.sigla && STORE_CONSULTANT[d.sigla]);
+    render();
+    document.getElementById('syncDot').classList.remove('off');
+    const now = new Date();
+    document.getElementById('syncText').textContent = 'atualizado ' + now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) + ' · ' + DATA.length + ' ações';
+  } catch(err){
+    document.getElementById('syncDot').classList.add('off');
+    document.getElementById('syncText').textContent = 'sem conexão — último estado carregado';
+  }
+}
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const aoa = [['Sigla','Pergunta','Consultor de Operações','Movimentacao','Responsavel']];
+  DATA.forEach(d => aoa.push([d.sigla, d.pergunta, STORE_CONSULTANT[d.sigla]||'', d.mov, d.resp]));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:10},{wch:90},{wch:32},{wch:22},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'BASE');
+  XLSX.writeFile(wb, 'BASE_AGRAVO_export.xlsx');
+});
+
+function computeTotals(rows){
+  const t = rows.length;
+  const f = rows.filter(r => r.mov === 'NC - Finalizada').length;
+  const p = rows.filter(r => r.mov === 'NC - Sem Movimentação').length;
+  return {t, f, p, pc: t ? f/t : 0};
+}
+
+function storeTableRows(storeList, byStore){
+  const ranked = [...storeList].sort((a,b) => byStore[b].pc - byStore[a].pc);
+  return ranked.map(s => {
+    const tt = byStore[s];
+    return `<tr><td style="font-family:var(--mono)">${esc(s)}</td><td>${tt.f}</td><td>${tt.p}</td><td class="pct ${pctClass(tt.pc)}">${fmtPct(tt.pc)}%</td></tr>`;
+  }).join('');
+}
+
+function storeDetailCards(storeList, byStore){
+  const ranked = [...storeList].sort((a,b) => byStore[b].pc - byStore[a].pc);
+  return ranked.map(s => {
+    const pendItems = DATA.filter(d => d.sigla===s && d.mov==='NC - Sem Movimentação');
+    const tier = pctClass(byStore[s].pc);
+    if (pendItems.length===0){
+      return `<div class="store-card st-good"><div class="store-head done"><span class="name">${esc(s)}</span><span class="badge">100% concluído</span></div>
+<div class="done-msg">Sem pendências — 100% concluído</div>
+</div>`;
+    }
+    const items = pendItems.map((it,i) => {
+      const tag = it.resp === 'MANUTENÇÃO' ? ' <span class="tag">(Manutenção)</span>' : '';
+      return `<div class="item" data-id="${it.id}"><span class="num">${String(i+1).padStart(2,'0')}</span><span class="txt">${esc(it.pergunta)}${tag}</span></div>`;
+    }).join('');
+    const mailBody = encodeURIComponent(`Loja ${s} — ${pendItems.length} não conformidade(s) pendente(s):
+
+` + pendItems.map((it,i)=>`${i+1}. ${it.pergunta}${it.resp==='MANUTENÇÃO'?' (Manutenção)':''}`).join('\n'));
+    const mailHref = `mailto:?subject=${encodeURIComponent('Agravo - Pendências Loja '+s)}&body=${mailBody}`;
+    return `<div class="store-card st-${tier}"><div class="store-head"><span class="name">${esc(s)}</span><span class="badge">${pendItems.length} pendente(s)</span><button class="mailbtn" onclick="window.location.href='${mailHref}'">✉ e-mail</button></div>
+<div class="items">
+${items}
+</div>
+</div>`;
+  }).join('');
+}
+
+function historyChart(){
+  if (!HISTORY || HISTORY.length < 2){
+    return '<p style="font-family:var(--mono);font-size:12px;color:var(--ink-soft);padding:8px 0">Ainda não há histórico suficiente — a evolução aparece aqui a partir do segundo dia de uso do painel.</p>';
+  }
+  const sorted = [...HISTORY].sort((a,b) => String(a[0]).localeCompare(String(b[0])));
+  const w = 900, h = 130, pad = 24;
+  const vals = sorted.map(r => Number(r[4]) || 0);
+  const min = Math.min(...vals, 0.5);
+  const max = Math.max(...vals, 1);
+  const xStep = (w - pad*2) / (sorted.length - 1 || 1);
+  const yFor = v => h - pad - ((v - min) / (max - min || 1)) * (h - pad*2);
+  const points = sorted.map((r,i) => [pad + i*xStep, yFor(Number(r[4])||0)]);
+  const path = points.map((p,i) => (i===0?'M':'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const dots = points.map((p,i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.2" fill="var(--amber)"><title>${esc(sorted[i][0])} — ${fmtPct(Number(sorted[i][4])||0)}%</title></circle>`).join('');
+  const firstLabel = sorted[0][0], lastLabel = sorted[sorted.length-1][0];
+  return `<div style="background:var(--card);border:1px solid var(--line);border-radius:4px;padding:14px 18px 8px;margin-bottom:24px">
+<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;display:block">
+<path d="${path}" fill="none" stroke="var(--amber)" stroke-width="2"/>
+${dots}
+</svg>
+<div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);padding-top:4px">
+<span>${esc(firstLabel)}</span><span>${esc(lastLabel)}</span>
+</div>
+</div>`;
+}
+
+function historyTable(){
+  if (!HISTORY || HISTORY.length === 0){
+    return '<p style="font-family:var(--mono);font-size:12px;color:var(--ink-soft);padding:8px 0">Sem registros ainda.</p>';
+  }
+  const sorted = [...HISTORY].sort((a,b) => String(b[0]).localeCompare(String(a[0])));
+  const rows = sorted.map(r => {
+    const [data, total, fin, pend, pctGeral, pFer, pPri, pLuc, pTan, pWan, pAra] = r;
+    const cell = v => `<td class="pct ${pctClass(Number(v)||0)}">${fmtPct(Number(v)||0)}%</td>`;
+    return `<tr><td style="font-family:var(--mono)">${esc(data)}</td><td>${total}</td><td>${fin}</td><td>${pend}</td>${cell(pctGeral)}${cell(pFer)}${cell(pPri)}${cell(pLuc)}${cell(pTan)}${cell(pWan)}${cell(pAra)}</tr>`;
+  }).join('');
+  return `<table><thead><tr><th>Data</th><th>Total</th><th>Fin.</th><th>Pend.</th><th>% Geral</th><th>Fernando</th><th>Priscilla</th><th>Lucas</th><th>Tania</th><th>Wanderson</th><th>Aracaju</th></tr></thead><tbody>
+${rows}
+</tbody></table>`;
+}
+
+function render(){
+  if (DATA.length === 0) return;
+
+  const byStore = {};
+  Object.keys(STORE_CONSULTANT).forEach(s => {
+    const rows = DATA.filter(d => d.sigla===s);
+    byStore[s] = computeTotals(rows);
+  });
+
+  // signature: signal strip
+  const storeOrder = Object.keys(STORE_CONSULTANT).sort();
+  document.getElementById('signalStrip').innerHTML = storeOrder.map(s => {
+    const tt = byStore[s];
+    return `<div class="tick ${pctClass(tt.pc)}" title="${esc(s)} — ${fmtPct(tt.pc)}%"></div>`;
+  }).join('');
+
+  const consultantStores = {};
+  CONSULTANTS.forEach(c => { consultantStores[c.key] = Object.keys(STORE_CONSULTANT).filter(s => STORE_CONSULTANT[s]===c.key); });
+
+  const consTotals = {};
+  CONSULTANTS.forEach(c => {
+    const rows = DATA.filter(d => STORE_CONSULTANT[d.sigla]===c.key);
+    consTotals[c.key] = computeTotals(rows);
+  });
+
+  const overall = computeTotals(DATA);
+  LAST_TOTALS = {overall, consTotals, byStore, consultantStores};
+
+  document.getElementById('heroFigure').innerHTML = fmtPct(overall.pc) + '<span class="unit">%</span>';
+  document.getElementById('kpisGeral').innerHTML = `
+    <div class="kpi"><div class="n">${overall.t}</div><div class="l">total</div></div>
+    <div class="kpi"><div class="n" style="color:var(--green)">${overall.f}</div><div class="l">finalizadas</div></div>
+    <div class="kpi"><div class="n" style="color:var(--red)">${overall.p}</div><div class="l">pendentes</div></div>`;
+
+  const consRanked = [...CONSULTANTS].sort((a,b) => consTotals[b.key].pc - consTotals[a.key].pc);
+  const activeBefore = document.querySelector('.tab-btn.active');
+  const activeTab = activeBefore ? activeBefore.dataset.tab : 'geral';
+
+  let navHtml = `<button class="tab-btn${activeTab==='geral'?' active':''}" data-tab="geral">Geral</button>`;
+  CONSULTANTS.forEach(c => { navHtml += `<button class="tab-btn${activeTab===c.tab?' active':''}" data-tab="${c.tab}">${esc(c.label.split(' ')[0])}</button>`; });
+  navHtml += `<button class="tab-btn${activeTab==='manut'?' active':''}" data-tab="manut">Manutenção</button>`;
+  navHtml += `<button class="tab-btn${activeTab==='historico'?' active':''}" data-tab="historico">Histórico</button>`;
+  document.getElementById('tabs').innerHTML = navHtml;
+
+  const rankingRows = consRanked.map(c => {
+    const tt = consTotals[c.key];
+    return `<tr><td>${esc(c.label)}</td><td>${tt.t}</td><td>${tt.f}</td><td>${tt.p}</td><td class="pct ${pctClass(tt.pc)}">${fmtPct(tt.pc)}%</td></tr>`;
+  }).join('');
+  const geralStoreRows = storeTableRows(Object.keys(STORE_CONSULTANT), byStore);
+
+  const toolbar = (tabKey, label) => `<div class="panel-toolbar">
+<button onclick="capturePanel('${tabKey}','${label.replace(/'/g,"\'")}','foto')">📷 Foto</button>
+<button onclick="capturePanel('${tabKey}','${label.replace(/'/g,"\'")}','email')">📧 E-mail</button>
+<button onclick="capturePanel('${tabKey}','${label.replace(/'/g,"\'")}','whatsapp')">💬 WhatsApp</button>
+</div>`;
+
+  let panelsHtml = `<section class="panel${activeTab==='geral'?' active':''}" id="panel-geral">
+${toolbar('geral','Dashboard Geral')}
+<div class="section-title">Ranking por consultor</div>
+<table><thead><tr><th>Consultor</th><th>Total</th><th>Fin.</th><th>Pend.</th><th>%</th></tr></thead><tbody>
+${rankingRows}
+</tbody></table>
+<div class="section-title">Status por loja</div>
+<table><thead><tr><th>Loja</th><th>Fin.</th><th>Pend.</th><th>%</th></tr></thead><tbody>
+${geralStoreRows}
+</tbody></table>
+</section>`;
+
+  CONSULTANTS.forEach(c => {
+    const tt = consTotals[c.key];
+    const storeRows = storeTableRows(consultantStores[c.key], byStore);
+    const detail = storeDetailCards(consultantStores[c.key], byStore);
+    panelsHtml += `<section class="panel${activeTab===c.tab?' active':''}" id="panel-${c.tab}">
+${toolbar(c.tab, c.label)}
+<div class="kpis" style="padding:0 0 18px"><div class="kpi"><div class="n">${tt.t}</div><div class="l">total</div></div><div class="kpi"><div class="n" style="color:var(--green)">${tt.f}</div><div class="l">finalizadas</div></div><div class="kpi"><div class="n" style="color:var(--red)">${tt.p}</div><div class="l">pendentes</div></div></div>
+<div class="section-title">Resumo por loja</div>
+<table><thead><tr><th>Loja</th><th>Fin.</th><th>Pend.</th><th>%</th></tr></thead><tbody>
+${storeRows}
+</tbody></table>
+<div class="section-title">Detalhamento por loja</div>
+${detail}
+</section>`;
+  });
+
+  const manutPend = DATA.filter(d => d.resp === 'MANUTENÇÃO' && d.mov === 'NC - Sem Movimentação');
+  const manutByStore = {};
+  manutPend.forEach(d => { (manutByStore[d.sigla] = manutByStore[d.sigla] || []).push(d); });
+  const manutStoresSorted = Object.keys(manutByStore).sort((a,b) => manutByStore[b].length - manutByStore[a].length);
+  const summaryRows = manutStoresSorted.map(s => {
+    const cons = CONSULTANTS.find(c => c.key === STORE_CONSULTANT[s]);
+    return `<tr><td style="font-family:var(--mono)">${esc(s)}</td><td>${esc(cons?cons.label:'')}</td><td>${manutByStore[s].length}</td></tr>`;
+  }).join('');
+
+  let manutDetail = '';
+  consRanked.forEach(c => {
+    const storesHere = manutStoresSorted.filter(s => STORE_CONSULTANT[s] === c.key);
+    if (storesHere.length===0) return;
+    manutDetail += `<div class="section-title" style="margin-top:20px">${esc(c.label)}</div>`;
+    storesHere.forEach(s => {
+      const items = manutByStore[s].map((it,i) => `<div class="item" data-id="${it.id}"><span class="num">${String(i+1).padStart(2,'0')}</span><span class="txt">${esc(it.pergunta)}</span></div>`).join('');
+      manutDetail += `<div class="store-card st-mid"><div class="store-head"><span class="name">${esc(s)}</span><span class="badge">${manutByStore[s].length} pendente(s)</span></div><div class="items">
+${items}
+</div></div>`;
+    });
+  });
+
+  panelsHtml += `<section class="panel${activeTab==='manut'?' active':''}" id="panel-manut">
+${toolbar('manut','Manutenção')}
+<div class="section-title">Resumo por loja</div>
+<table><thead><tr><th>Loja</th><th>Consultor</th><th>Qtd.</th></tr></thead><tbody>
+${summaryRows}
+</tbody></table>
+<div class="section-title">Detalhamento</div>
+${manutDetail}
+</section>`;
+
+  panelsHtml += `<section class="panel${activeTab==='historico'?' active':''}" id="panel-historico">
+${toolbar('historico','Histórico')}
+<div class="section-title">Evolução do % geral de reversão</div>
+${historyChart()}
+<div class="section-title">Retrato por dia</div>
+${historyTable()}
+</section>`;
+
+  document.getElementById('panelsRoot').innerHTML = panelsHtml;
+
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+      window.scrollTo({top:0,behavior:'smooth'});
+    });
+  });
+}
+
+function buildSummaryText(tabKey, label){
+  const t = LAST_TOTALS;
+  if (tabKey === 'geral'){
+    return `AGRAVO — Reversões — Dashboard Geral
+Total: ${t.overall.t} | Finalizadas: ${t.overall.f} | Pendentes: ${t.overall.p} | ${fmtPct(t.overall.pc)}%`;
+  }
+  if (tabKey === 'manut'){
+    return `AGRAVO — Reversões — Manutenção`;
+  }
+  if (tabKey === 'historico'){
+    return `AGRAVO — Reversões — Histórico de evolução`;
+  }
+  const cons = CONSULTANTS.find(c => c.tab === tabKey);
+  const tt = t.consTotals[cons.key];
+  return `AGRAVO — Reversões — ${label}
+Total: ${tt.t} | Finalizadas: ${tt.f} | Pendentes: ${tt.p} | ${fmtPct(tt.pc)}%`;
+}
+
+function capturePanel(tabKey, label, action){
+  const panel = document.getElementById('panel-' + tabKey);
+  if (!panel){ return; }
+  const overlay = document.getElementById('captureOverlay');
+  const box = document.getElementById('captureBox');
+  overlay.style.display = 'flex';
+
+  const clone = panel.cloneNode(true);
+  clone.classList.add('active');
+  clone.querySelectorAll('.panel-toolbar').forEach(el => el.remove());
+  clone.querySelectorAll('.mailbtn').forEach(el => el.remove());
+
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'width:920px;padding:24px;background:#fff;font-family:"IBM Plex Sans",Arial,sans-serif;';
+  const titleEl = document.createElement('div');
+  titleEl.style.cssText = 'font-family:"Space Grotesk",Arial,sans-serif;font-size:18px;font-weight:700;color:#12202E;margin-bottom:14px;';
+  titleEl.textContent = 'AGRAVO — Reversões — ' + label;
+  wrapper.appendChild(titleEl);
+  wrapper.appendChild(clone);
+
+  box.innerHTML = '';
+  box.appendChild(wrapper);
+  box.style.top = '0';
+  box.style.left = '0';
+  box.style.zIndex = '-1';
+
+  const doCapture = () => {
+    html2canvas(wrapper, {scale:2, backgroundColor:'#ffffff', useCORS:true}).then(canvas => {
+      overlay.style.display = 'none';
+      box.innerHTML = '';
+      canvas.toBlob(blob => {
+        const fileName = `Agravo_${tabKey}_${new Date().toISOString().slice(0,10)}.png`;
+        const file = new File([blob], fileName, {type:'image/png'});
+        const summary = buildSummaryText(tabKey, label);
+
+        if (action === 'foto'){
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = fileName; a.click();
+          URL.revokeObjectURL(url);
+          return;
+        }
+
+        if (navigator.canShare && navigator.canShare({files:[file]})){
+          navigator.share({files:[file], title:'AGRAVO', text: summary}).catch(()=>{});
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName; a.click();
+        URL.revokeObjectURL(url);
+
+        const text = summary + '\n\n(Anexe a imagem que acabou de ser baixada: ' + fileName + ')';
+        if (action === 'email'){
+          window.location.href = `mailto:?subject=${encodeURIComponent('AGRAVO - '+label)}&body=${encodeURIComponent(text)}`;
+        } else if (action === 'whatsapp'){
+          window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        }
+      }, 'image/png');
+    });
+  };
+
+  if (document.fonts && document.fonts.ready){
+    document.fonts.ready.then(() => setTimeout(doCapture, 60));
+  } else {
+    setTimeout(doCapture, 150);
+  }
+}
+
+fetchBase();
+setInterval(() => fetchBase(), POLL_MS);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) fetchBase(); });
+</script>
+</body>
+</html>
